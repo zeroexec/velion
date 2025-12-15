@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VΞLION</title>
+    <link rel="icon" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-bg: #0A0A0A; 
+            --secondary-bg: #1A1A1A; 
+            --text-color: #00FFC0; 
+            --subtle-text: #909090;
+            --gradient-start: #00A388; 
+            --gradient-end: #00E0A3; 
+            --border-color: #00E0A3;
+            --error-color: #FF6347; 
+            --font-main: 'Poppins', sans-serif; 
+            --font-mono: 'Roboto Mono', monospace; 
+        }
+
+        body {
+            margin: 0;
+            font-family: var(--font-main);
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            height: 100vh;
+            overflow: hidden; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column; 
+        }
+
+        #velion-title {
+            font-family: var(--font-main);
+            font-weight: 900; 
+            font-size: 8vw; 
+            color: var(--text-color);
+            text-shadow: 0 0 20px var(--border-color); 
+            margin: 0;
+            user-select: none;
+            line-height: 1;
+            z-index: 20; 
+        }
+
+        #sidebar, #edge-trigger, #mobile-header, .sidebar-overlay, #instruction-text {
+            display: none !important;
+        }
+        
+        #mainContentContainer {
+            display: none; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            background-color: var(--primary-bg);
+        }
+        
+        #content-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+            background-color: var(--primary-bg);
+        }
+
+        #search-modal-overlay, #login-modal-overlay, #welcome-modal-overlay, #logout-modal-overlay, #change-creds-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none; 
+            justify-content: center;
+            align-items: center; 
+            z-index: 5000;
+        }
+        
+        #search-modal-overlay {
+            z-index: 7000; 
+            align-items: flex-start;
+            padding-top: 10vh;
+        }
+        
+        #login-modal-overlay, #welcome-modal-overlay, #logout-modal-overlay, #change-creds-modal-overlay {
+             z-index: 6000;
+        }
+
+        #search-modal, #login-modal, #welcome-modal, #logout-modal, #change-creds-modal {
+            background-color: var(--secondary-bg);
+            width: 100%;
+            max-width: 600px;
+            border-radius: 0; 
+            border: 1px solid var(--border-color); 
+            box-shadow: 0 0 15px rgba(0, 224, 163, 0.4); 
+            overflow: hidden;
+            transform: scale(0.95);
+            opacity: 0;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            font-family: var(--font-mono); 
+        }
+        
+        #login-modal, #welcome-modal, #change-creds-modal {
+             max-width: 400px;
+             padding: 30px;
+        }
+        
+        #logout-modal {
+            max-width: 300px; 
+            padding: 25px;
+        }
+
+
+        #search-modal-overlay.active #search-modal, 
+        #login-modal-overlay.active #login-modal, 
+        #welcome-modal-overlay.active #welcome-modal,
+        #logout-modal-overlay.active #logout-modal,
+        #change-creds-modal-overlay.active #change-creds-modal {
+            transform: scale(1);
+            opacity: 1;
+        }
+        
+        #search-input {
+            width: 100%;
+            padding: 20px;
+            border: none;
+            font-size: 1rem;
+            font-family: var(--font-mono);
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            box-shadow: inset 0 -3px 0 var(--border-color); 
+            outline: none;
+        }
+        
+        #login-username, #login-password, 
+        #new-username, #new-password {
+            margin-bottom: 10px; 
+            padding: 10px; 
+            width: 100%; 
+            box-sizing: border-box; 
+            border: 1px solid var(--border-color); 
+            background: var(--primary-bg); 
+            color: var(--text-color); 
+            border-radius: 0;
+            outline: none;
+            font-family: var(--font-mono);
+        }
+        
+        #login-button, #save-creds-button {
+            padding: 10px; 
+            width: 100%; 
+            background: var(--gradient-end); 
+            color: var(--primary-bg); 
+            border: none; 
+            border-radius: 0; 
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s ease;
+            text-shadow: none;
+            font-family: var(--font-mono);
+        }
+        
+        #login-button:hover, #save-creds-button:hover {
+            background: var(--gradient-start);
+        }
+        
+        #logout-button-confirm {
+            padding: 10px; 
+            width: 100%; 
+            background: var(--error-color); 
+            color: var(--primary-bg); 
+            border: none; 
+            border-radius: 0; 
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s ease;
+            margin-top: 15px;
+            text-shadow: none;
+            font-family: var(--font-mono);
+        }
+        
+        #logout-button-confirm:hover {
+            background: #D9533B;
+        }
+        
+        #login-message, #creds-message {
+            color: var(--error-color) !important;
+            text-shadow: 0 0 5px rgba(255, 99, 71, 0.7);
+        }
+        
+        #creds-message.success {
+            color: var(--text-color) !important;
+            text-shadow: 0 0 5px var(--border-color);
+        }
+        
+        #login-modal h3, #welcome-modal h1, #logout-modal h3, #change-creds-modal h3 {
+            color: var(--text-color);
+            text-shadow: 0 0 8px var(--border-color);
+            font-family: var(--font-mono);
+        }
+
+
+        #search-results {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+        
+        #search-results::-webkit-scrollbar {
+            width: 6px;
+        }
+        #search-results::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 255, 192, 0.4);
+            border-radius: 0;
+        }
+
+        .search-result-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.9rem;
+            color: var(--subtle-text);
+            transition: background-color 0.1s ease, border-left-color 0.1s ease;
+            border-left: 3px solid transparent;
+            font-family: var(--font-mono);
+        }
+
+        .search-result-item i {
+            color: var(--subtle-text);
+        }
+
+        .search-result-item:hover, .search-result-item.selected {
+            background-color: var(--primary-bg);
+            border-left-color: var(--border-color);
+            color: var(--text-color);
+            text-shadow: 0 0 3px var(--text-color);
+        }
+
+        .search-result-item.selected i {
+            color: var(--border-color); 
+            text-shadow: 0 0 5px var(--border-color);
+        }
+    </style>
+</head>
+<body id="body">
+    
+    <h1 id="velion-title">VΞLION</h1>
+    
+    <header id="mobile-header"></header>
+    <div id="edge-trigger"></div>
+    <div id="sidebar">
+        <div class="sidebar-header"></div>
+        <nav role="navigation">
+            <div id="main-nav">
+            </div>
+            <div id="app-grid-dynamic"></div>
+        </nav>
+        <div class="sidebar-footer"></div>
+    </div>
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+    
+    <div id="mainContentContainer">
+        <iframe id="content-iframe" src="about:blank"></iframe>
+    </div>
+    
+    <div id="instruction-text"></div>
+
+    <div id="search-modal-overlay">
+        <div id="search-modal">
+            <input type="text" id="search-input" placeholder=">> SEARCH (Ctrl + O)">
+            <div id="search-results">
+                <p style="padding: 15px 20px; color:var(--subtle-text);">[...LOADING TOOLS...]</p>
+            </div>
+        </div>
+    </div>
+    
+    <div id="login-modal-overlay">
+        <div id="login-modal">
+            <h3 style="color: var(--text-color); margin-top: 0; text-align: center;">[ ACCESS PROTOCOL REQUIRED ]</h3>
+            <p id="login-message" style="color: var(--error-color); font-size: 0.9rem; text-align: center; display: none;">[...INITIATING AUTH SEQUENCE...]</p>
+            <input type="text" id="login-username" placeholder="USERNAME">
+            <input type="password" id="login-password" placeholder="PASSWORD">
+            <button id="login-button">EXECUTE LOGIN</button>
+        </div>
+    </div>
+    
+    <div id="welcome-modal-overlay">
+        <div id="welcome-modal">
+            <h1 style="color: var(--text-color); margin-top: 0; text-align: center;">[ WARNING: DENIED ]</h1>
+            <p style="text-align: center; color: var(--subtle-text);">Authentication required for quick access. Press Ctrl + L to initiate login sequence.</p>
+        </div>
+    </div>
+    
+    <div id="logout-modal-overlay">
+        <div id="logout-modal">
+            <h3 style="color: var(--text-color); margin-top: 0; text-align: center;">[ TERMINATE SESSION? ]</h3>
+            <p style="text-align: center; color: var(--subtle-text);">Are you sure you want to log out?</p>
+            <button id="logout-button-confirm">LOGOUT</button>
+        </div>
+    </div>
+    
+    <div id="change-creds-modal-overlay">
+        <div id="change-creds-modal">
+            <h3 style="color: var(--text-color); margin-top: 0; text-align: center;">[ MODIFY ACCESS CREDENTIALS ]</h3>
+            <p id="creds-message" style="color: var(--subtle-text); font-size: 0.9rem; text-align: center; display: none;">WARNING: Changes are immediate.</p>
+            <input type="text" id="new-username" placeholder="NEW USERNAME">
+            <input type="password" id="new-password" placeholder="NEW PASSWORD">
+            <button id="save-creds-button">SAVE CHANGES</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyCba6M_spBXvuG91Zn-XJ4bSTX6vNcST0",
+            authDomain: "index-68220.firebaseapp.com",
+            databaseURL: "https://index-68220-default-rtdb.firebaseio.com",
+            projectId: "index-68220",
+            storageBucket: "index-68220.firebasestorage.app",
+            messagingSenderId: "633087068802",
+            appId: "1:633087068802:web:f8aa1f2ef9c00b99d1429b",
+            measurementId: "G-2VQCRFJQCM"
+        };
+        
+        const SAFE_APP_ID = 'user-shortcuts'; 
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const shortcutRef = ref(db, 'artifacts/' + SAFE_APP_ID + '/shortcuts/list'); 
+        const credentialsRef = ref(db, 'artifacts/' + SAFE_APP_ID + '/credentials'); 
+
+        let isLoggedIn = localStorage.getItem('velionLoggedIn') === 'true'; 
+        let CORRECT_USERNAME = ''; 
+        let CORRECT_PASSWORD = ''; 
+        let isCredentialsLoaded = false;
+
+        const searchModalOverlay = document.getElementById('search-modal-overlay');
+        const searchInput = document.getElementById('search-input');
+        const searchResultsContainer = document.getElementById('search-results');
+        const loginModalOverlay = document.getElementById('login-modal-overlay');
+        const loginUsernameInput = document.getElementById('login-username');
+        const loginPasswordInput = document.getElementById('login-password');
+        const loginButton = document.getElementById('login-button');
+        const loginMessage = document.getElementById('login-message');
+        const welcomeModalOverlay = document.getElementById('welcome-modal-overlay');
+        const logoutModalOverlay = document.getElementById('logout-modal-overlay');
+        const logoutButtonConfirm = document.getElementById('logout-button-confirm');
+        const changeCredsModalOverlay = document.getElementById('change-creds-modal-overlay');
+        const newUsernameInput = document.getElementById('new-username');
+        const newPasswordInput = document.getElementById('new-password');
+        const saveCredsButton = document.getElementById('save-creds-button');
+        const credsMessage = document.getElementById('creds-message');
+        
+        const instructionText = document.getElementById('instruction-text');
+        const velionTitle = document.getElementById('velion-title');
+        
+        const mainContentContainer = document.getElementById('mainContentContainer');
+        const contentIframe = document.getElementById('content-iframe');
+        
+        let allApps = []; 
+        let filteredApps = []; 
+        let selectedIndex = -1; 
+
+        const staticAppsData = []; 
+        
+        function openModal(overlay) {
+            overlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden'; 
+            setTimeout(() => overlay.classList.add('active'), 10); 
+        }
+
+        function closeModal(overlay) {
+            overlay.classList.remove('active');
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                if (searchModalOverlay.style.display === 'none' && loginModalOverlay.style.display === 'none' && welcomeModalOverlay.style.display === 'none' && logoutModalOverlay.style.display === 'none' && changeCredsModalOverlay.style.display === 'none') {
+                    document.body.style.overflow = 'auto'; 
+                }
+            }, 200); 
+        }
+
+        function handleLogout() {
+            isLoggedIn = false;
+            localStorage.removeItem('velionLoggedIn'); 
+            closeModal(logoutModalOverlay);
+            
+            velionTitle.style.display = 'block'; 
+            
+            mainContentContainer.style.display = 'none'; 
+            contentIframe.src = 'about:blank'; 
+            
+            console.log("[LOGOUT] Session terminated. LocalStorage cleared.");
+        }
+
+        function openLogoutModal() {
+            closeModal(searchModalOverlay);
+            closeModal(loginModalOverlay);
+            closeModal(welcomeModalOverlay);
+            closeModal(changeCredsModalOverlay);
+            openModal(logoutModalOverlay);
+            logoutButtonConfirm.focus(); 
+        }
+        
+        function openChangeCredsModal() {
+            closeModal(searchModalOverlay);
+            closeModal(loginModalOverlay);
+            closeModal(welcomeModalOverlay);
+            closeModal(logoutModalOverlay);
+            
+            newUsernameInput.value = CORRECT_USERNAME;
+            newPasswordInput.value = CORRECT_PASSWORD;
+            credsMessage.style.display = 'none';
+            credsMessage.classList.remove('success');
+
+            openModal(changeCredsModalOverlay);
+            newUsernameInput.focus();
+        }
+        
+        async function handleChangeCredentials() {
+            const newUsername = newUsernameInput.value.trim();
+            const newPassword = newPasswordInput.value.trim();
+
+            if (newUsername === '' || newPassword === '') {
+                credsMessage.textContent = '[ ERROR ] Username and Password cannot be empty.';
+                credsMessage.style.display = 'block';
+                credsMessage.classList.remove('success');
+                return;
+            }
+
+            try {
+                await set(credentialsRef, { username: newUsername, password: newPassword });
+                
+                credsMessage.textContent = '[ SUCCESS ] Credentials updated successfully.';
+                credsMessage.style.display = 'block';
+                credsMessage.classList.add('success');
+                newPasswordInput.value = '';
+                
+                setTimeout(() => {
+                    closeModal(changeCredsModalOverlay);
+                }, 1500);
+
+            } catch (error) {
+                console.error("[ERROR] Failed to update credentials:", error);
+                credsMessage.textContent = '[ FATAL ] Failed to save changes to server.';
+                credsMessage.style.display = 'block';
+                credsMessage.classList.remove('success');
+            }
+        }
+
+
+        function handleLogin() {
+            const username = loginUsernameInput.value.trim();
+            const password = loginPasswordInput.value.trim();
+
+            if (!isCredentialsLoaded) {
+                 loginMessage.textContent = '[ FATAL ] Credential database unavailable.';
+                 loginMessage.style.display = 'block';
+                 return;
+            }
+
+            if (username === CORRECT_USERNAME && password === CORRECT_PASSWORD) {
+                isLoggedIn = true;
+                localStorage.setItem('velionLoggedIn', 'true'); 
+                closeModal(loginModalOverlay);
+                loginUsernameInput.value = '';
+                loginPasswordInput.value = '';
+                loginMessage.style.display = 'none';
+                
+                mainContentContainer.style.display = 'block'; 
+                
+                console.log("[LOGIN] Access granted. Status saved to LocalStorage.");
+
+            } else {
+                loginMessage.textContent = '[ ACCESS DENIED ] Invalid USERNAME or PASSWORD.';
+                loginMessage.style.display = 'block';
+                loginPasswordInput.value = '';
+            }
+        }
+        
+        function openSearchModal() {
+            searchInput.value = '';
+            searchResultsContainer.innerHTML = '';
+            filterApps(''); 
+            openModal(searchModalOverlay);
+            searchInput.focus();
+        }
+        
+        function navigateToApp(url) {
+            if (url) {
+                contentIframe.src = url; 
+                
+                mainContentContainer.style.display = 'block'; 
+                
+                closeModal(searchModalOverlay);
+                
+                console.log(`[NAVIGASI] Memuat: ${url} ke dalam Iframe.`);
+            }
+        }
+        
+        function filterApps(query) {
+            const lowerQuery = query.toLowerCase().trim();
+            
+            filteredApps = allApps.filter(app => 
+                app.name.toLowerCase().includes(lowerQuery) ||
+                app.icon.toLowerCase().includes(lowerQuery) ||
+                app.url.toLowerCase().includes(lowerQuery)
+            );
+
+            renderResults(filteredApps);
+            selectedIndex = -1; 
+        }
+
+        function renderResults(results) {
+            searchResultsContainer.innerHTML = '';
+            if (results.length === 0) {
+                searchResultsContainer.innerHTML = `<p style="padding: 15px 20px; color:var(--subtle-text);">[ NOT FOUND ] No results for "${searchInput.value}"</p>`;
+                return;
+            }
+
+            results.forEach((item, index) => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'search-result-item';
+                resultItem.dataset.url = item.url;
+                resultItem.innerHTML = `
+                    <i class="fa-solid ${item.icon}"></i>
+                    <span>${item.name}</span>
+                `;
+                
+                resultItem.addEventListener('click', () => navigateToApp(item.url));
+
+                resultItem.addEventListener('mouseenter', () => {
+                    document.querySelectorAll('.search-result-item').forEach(el => el.classList.remove('selected'));
+                    resultItem.classList.add('selected');
+                    selectedIndex = index;
+                });
+                
+                searchResultsContainer.appendChild(resultItem);
+            });
+            
+            if (results.length > 0) {
+                 selectedIndex = 0;
+                 updateSelection();
+            }
+        }
+
+        function updateSelection() {
+            const items = document.querySelectorAll('.search-result-item');
+            if (items.length === 0) return;
+
+            if (selectedIndex >= items.length) selectedIndex = 0;
+            if (selectedIndex < 0) selectedIndex = items.length - 1;
+
+            items.forEach((item, index) => {
+                item.classList.toggle('selected', index === selectedIndex);
+            });
+            
+            items[selectedIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            
+            
+            if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+                e.preventDefault();
+                
+                if (isLoggedIn) {
+                    openLogoutModal();
+                } else {
+                    if (searchModalOverlay.style.display === 'flex') closeModal(searchModalOverlay);
+                    if (welcomeModalOverlay.style.display === 'flex') closeModal(welcomeModalOverlay);
+                    if (logoutModalOverlay.style.display === 'flex') closeModal(logoutModalOverlay);
+                    if (changeCredsModalOverlay.style.display === 'flex') closeModal(changeCredsModalOverlay);
+
+                    openModal(loginModalOverlay);
+                    if (isCredentialsLoaded) {
+                        loginMessage.style.display = 'none';
+                        loginUsernameInput.focus();
+                    } else {
+                        loginMessage.textContent = '[...INITIATING AUTH SEQUENCE...]';
+                        loginMessage.style.display = 'block';
+                    }
+                }
+            } 
+            
+            else if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+                e.preventDefault();
+                
+                if (isLoggedIn) {
+                    openChangeCredsModal();
+                } else {
+                    openModal(welcomeModalOverlay);
+                }
+            }
+            
+            else if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
+                e.preventDefault();
+                
+                if (welcomeModalOverlay.style.display === 'flex') closeModal(welcomeModalOverlay);
+                if (loginModalOverlay.style.display === 'flex') closeModal(loginModalOverlay);
+                if (logoutModalOverlay.style.display === 'flex') closeModal(logoutModalOverlay);
+                if (changeCredsModalOverlay.style.display === 'flex') closeModal(changeCredsModalOverlay);
+
+                if (isLoggedIn) {
+                    openSearchModal();
+                } else {
+                    openModal(welcomeModalOverlay);
+                }
+            } 
+            
+            else {
+                if (searchModalOverlay.style.display === 'flex') {
+                    if (e.key === 'Escape') {
+                        closeModal(searchModalOverlay);
+                        e.preventDefault();
+                        return;
+                    }
+                    
+                    if (['ArrowUp', 'ArrowDown', 'Enter'].includes(e.key)) {
+                        e.preventDefault();
+                        if (filteredApps.length === 0) return;
+
+                        if (e.key === 'ArrowDown') {
+                            selectedIndex++;
+                            updateSelection();
+                        } else if (e.key === 'ArrowUp') {
+                            selectedIndex--;
+                            updateSelection();
+                        } else if (e.key === 'Enter') {
+                            if (selectedIndex !== -1 && filteredApps[selectedIndex]) {
+                                navigateToApp(filteredApps[selectedIndex].url);
+                            }
+                        }
+                    }
+                } 
+                else if (loginModalOverlay.style.display === 'flex' || welcomeModalOverlay.style.display === 'flex' || logoutModalOverlay.style.display === 'flex' || changeCredsModalOverlay.style.display === 'flex') {
+                    if (e.key === 'Escape') {
+                        if (loginModalOverlay.style.display === 'flex') closeModal(loginModalOverlay);
+                        if (welcomeModalOverlay.style.display === 'flex') closeModal(welcomeModalOverlay);
+                        if (logoutModalOverlay.style.display === 'flex') closeModal(logoutModalOverlay);
+                        if (changeCredsModalOverlay.style.display === 'flex') closeModal(changeCredsModalOverlay);
+                        e.preventDefault();
+                        return;
+                    }
+                    if (e.key === 'Enter') {
+                        if (loginModalOverlay.style.display === 'flex') {
+                            handleLogin();
+                        } else if (logoutModalOverlay.style.display === 'flex') {
+                            handleLogout();
+                        } else if (changeCredsModalOverlay.style.display === 'flex') {
+                            handleChangeCredentials();
+                        }
+                    }
+                }
+            }
+        });
+
+        searchInput.addEventListener('input', () => {
+            filterApps(searchInput.value);
+        });
+        
+        loginButton.addEventListener('click', handleLogin);
+        logoutButtonConfirm.addEventListener('click', handleLogout);
+        saveCredsButton.addEventListener('click', handleChangeCredentials);
+        
+        function startRealtimeListener() {
+            
+            onValue(credentialsRef, (snapshot) => {
+                const creds = snapshot.val();
+                if (creds && creds.username && creds.password) {
+                    CORRECT_USERNAME = creds.username;
+                    CORRECT_PASSWORD = creds.password;
+                    isCredentialsLoaded = true;
+                    if (loginModalOverlay.style.display !== 'flex') {
+                        loginMessage.style.display = 'none';
+                    }
+                    console.log("[STATUS] Credentials loaded successfully.");
+                } else {
+                    console.error("[ERROR] Failed to load credentials from RTDB.");
+                    isCredentialsLoaded = false;
+                    loginMessage.textContent = '[ FATAL ] Failed to load server credentials.';
+                    if (loginModalOverlay.style.display === 'flex') {
+                         loginMessage.style.display = 'block';
+                    }
+                }
+            }, (error) => {
+                console.error("[ERROR] RTDB Connection error:", error);
+                isCredentialsLoaded = false;
+                loginMessage.textContent = '[ FATAL ] Server connection failed.';
+                if (loginModalOverlay.style.display === 'flex') {
+                    loginMessage.style.display = 'block';
+                }
+            });
+            
+            allApps = [...staticAppsData]; 
+            
+            onValue(shortcutRef, (snapshot) => {
+                const dynamicShortcuts = snapshot.val() || {};
+                const keys = Object.keys(dynamicShortcuts);
+                
+                const dynamicApps = keys.map(key => {
+                     const item = dynamicShortcuts[key];
+                     const icon = item.icon || 'fa-cube'; 
+                     return { name: item.name, url: item.url, icon: icon, order: item.order };
+                });
+                
+                allApps = [...staticAppsData, ...dynamicApps].sort((a, b) => {
+                    const orderA = a.order === undefined ? Infinity : a.order;
+                    const orderB = b.order === undefined ? Infinity : b.order;
+                    return orderA - orderB;
+                });
+                
+                if (searchModalOverlay.style.display === 'flex') {
+                    filterApps(searchInput.value);
+                }
+
+            }, (error) => {
+                console.error("[ERROR] Failed to load RTDB tools data:", error);
+                allApps = staticAppsData; 
+            });
+        }
+        
+        
+        function handlePostMessage(event) {
+            
+            
+            const message = event.data;
+            
+            if (message.type === 'OPEN_SEARCH_MODAL') {
+                if (isLoggedIn) {
+                    openSearchModal();
+                } else {
+                    openModal(welcomeModalOverlay);
+                }
+            }
+            
+            if (message.type === 'OPEN_LOGIN_MODAL') {
+                if (isLoggedIn) {
+                    openLogoutModal();
+                } else {
+                    openModal(loginModalOverlay);
+                    if (isCredentialsLoaded) {
+                         loginMessage.style.display = 'none';
+                         loginUsernameInput.focus();
+                    }
+                }
+            }
+            
+            if (message.type === 'OPEN_CHANGE_CREDS_MODAL') { 
+                if (isLoggedIn) {
+                    openChangeCredsModal(); 
+                } else {
+                    openModal(welcomeModalOverlay);
+                }
+            }
+        }
+
+        window.addEventListener('message', handlePostMessage, false);
+        
+        
+
+        window.onload = () => {
+             startRealtimeListener(); 
+             
+             if (isLoggedIn) {
+                 mainContentContainer.style.display = 'block';
+             } else {
+                 velionTitle.style.display = 'block';
+                 mainContentContainer.style.display = 'none';
+             }
+             
+             document.querySelectorAll('#search-modal-overlay, #login-modal-overlay, #welcome-modal-overlay, #logout-modal-overlay, #change-creds-modal-overlay').forEach(overlay => {
+                 overlay.addEventListener('click', (e) => {
+                     if (e.target.id.endsWith('-modal-overlay')) {
+                         closeModal(e.target);
+                     }
+                 });
+             });
+        };
+    </script>
+</body>
+</html>
