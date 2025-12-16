@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VΞLION TASK</title>
+    <link rel="icon" href="logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root {
+            --accent-color: #00FF00;
+            --accent-light: #004d00;
+            --main-bg: #1e1e1e;
+            --paper-bg: #2d2d2d;
+            --text-color: #00FF00;
+            --secondary-text: #009900;
+            --border-color: #005500;
+            --soft-shadow: 0 4px 8px rgba(0, 255, 0, 0.2);
+            --neumo-light: #3a3a3a;
+            --neumo-dark: #101010;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: var(--main-bg);
+            margin: 0;
+            padding: 0;
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background-color: var(--main-bg); 
+            border-bottom: 1px solid var(--border-color); 
+            padding: 8px 30px;
+            display: flex; 
+            align-items: center; 
+            box-shadow: none; 
+            position: sticky; top: 0; z-index: 900; 
+            margin-bottom: 30px;
+        }
+        .header h1 { 
+            margin: 0; font-weight: 700; flex-grow: 1; 
+            font-size: 1.5rem;
+            color: var(--accent-color);
+        }
+        
+        #addTaskButton {
+            width: 30px; height: 30px; border-radius: 0;
+            background-color: var(--accent-color); color: var(--main-bg);
+            border: 1px solid var(--accent-color); cursor: pointer;
+            font-size: 1rem; display: flex; align-items: center;
+            justify-content: center; transition: background-color 0.2s, transform 0.1s;
+            box-shadow: none; margin-left: 10px;
+        }
+        #addTaskButton:hover { background-color: var(--secondary-text); color: var(--text-color); transform: scale(1.05); }
+        #addTaskButton svg { width: 16px; height: 16px; }
+
+        .content { 
+            padding: 0 30px; 
+            flex-grow: 1; 
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        #tasksGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding-bottom: 50px;
+        }
+        .task-card {
+            padding: 18px; border-radius: 0; background-color: var(--paper-bg);
+            border: 1px solid var(--border-color);
+            box-shadow: 
+                3px 3px 6px var(--neumo-dark),
+                -3px -3px 6px var(--neumo-light);
+            transition: box-shadow 0.3s, border-color 0.3s; 
+            word-wrap: break-word; min-height: 80px;
+            overflow: hidden; position: relative;
+        }
+        .task-card:hover { 
+            border-color: var(--accent-color);
+            box-shadow: none;
+        }
+        .task-card-title {
+            margin: 0 0 5px 0; font-size: 1.1rem; font-weight: 700;
+            color: var(--accent-color);
+            line-height: 1.4;
+            cursor: pointer;
+        }
+        .task-card-title a { color: var(--accent-color); text-decoration: underline; }
+        
+        .task-timestamp {
+            font-size: 0.75rem;
+            color: var(--secondary-text);
+            margin-top: 10px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 8px;
+            display: block;
+        }
+
+        .delete-btn {
+            position: absolute; top: 8px; right: 8px; background: none; border: none;
+            color: var(--text-color);
+            cursor: pointer; font-size: 1.1rem; opacity: 0;
+            transition: opacity 0.2s; z-index: 20; padding: 5px; border-radius: 0;
+        }
+        .task-card:hover .delete-btn { opacity: 1; background-color: var(--neumo-dark); }
+        .delete-btn:hover { background-color: var(--neumo-light); }
+        
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); display: none; justify-content: center;
+            align-items: center; z-index: 2000;
+        }
+        .modal-content {
+            background-color: var(--paper-bg); border-radius: 0;
+            border: 1px solid var(--accent-color);
+            box-shadow: var(--soft-shadow); width: 90%; padding: 25px;
+            position: relative; transform: scale(0.95); opacity: 0;
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease-out;
+            max-width: 600px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-overlay.active .modal-content { transform: scale(1); opacity: 1; }
+        
+        #newTitle, #editTitle {
+            font-family: 'Roboto Mono', monospace; font-weight: 700; font-size: 1.5rem;
+            border: none; outline: none; width: 100%; padding: 10px 0;
+            margin-bottom: 15px; border-bottom: 1px solid var(--border-color); resize: none;
+            background-color: var(--paper-bg); color: var(--accent-color);
+        }
+        .modal-actions {
+            display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;
+        }
+        .modal-btn {
+            padding: 10px 15px; border: 1px solid var(--accent-color); border-radius: 0;
+            font-weight: 700; cursor: pointer; transition: background-color 0.2s;
+            text-transform: uppercase; font-family: 'Roboto Mono', monospace;
+        }
+        .modal-btn.action-cancel { background-color: var(--paper-bg); color: var(--secondary-text); }
+        .modal-btn.action-cancel:hover { background-color: var(--neumo-dark); color: var(--text-color); }
+
+        .modal-btn.action-safe { background-color: var(--accent-color); color: var(--main-bg); }
+        .modal-btn.action-safe:hover { background-color: var(--secondary-text); color: var(--text-color); }
+
+        #confirmationModal .modal-content { max-width: 380px; text-align: center; padding: 30px; }
+        .confirmation-actions { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+
+        @media (max-width: 768px) {
+            .content { padding: 0 15px; }
+            #tasksGrid { grid-template-columns: 1fr; gap: 15px; }
+            .task-card { min-height: 100px; padding: 15px; }
+            #newTitle, #editTitle { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <h1>VΞLION TASK</h1> 
+        <button id="addTaskButton" title="Tambah Task Baru" onclick="openAddTaskModal()">
+             <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" /></svg>
+        </button>
+    </header>
+
+    <div class="modal-overlay" id="addTaskModalOverlay">
+        <div class="modal-content" id="addTaskModalContent">
+            <textarea id="newTitle" placeholder="[TASK BARU] Tulis judul tugas di sini..." rows="2"></textarea>
+            <div class="modal-actions">
+                <button class="modal-btn action-cancel" id="cancelNewTaskBtn">Batal</button> 
+                <button class="modal-btn action-safe" id="saveNewTaskBtn">Simpan Task</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="editModalOverlay">
+        <div class="modal-content" id="editModalContent">
+            <input type="hidden" id="editTaskId">
+            <textarea id="editTitle" placeholder="[EDIT TASK] Judul tugas..." rows="2"></textarea>
+            <div class="modal-actions">
+                <button class="modal-btn action-cancel" id="cancelEditBtn">Batal</button>
+                <button class="modal-btn action-safe" id="doneEditBtn">Simpan Perubahan</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="confirmationModal">
+        <div class="modal-content">
+            <p id="confirmationMessage"></p>
+            <div class="confirmation-actions">
+                <button class="modal-btn action-cancel" id="confirmCancel">Batal</button>
+                <button class="modal-btn action-safe" id="confirmOK">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="content">
+        <div class="tasks-grid" id="tasksGrid">
+        </div>
+    </main>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCba6M_spBXvuG91Zn-XWJ4bSTX6vNcST0",
+            authDomain: "index-68220.firebaseapp.com",
+            databaseURL: "https://index-68220-default-rtdb.firebaseio.com",
+            projectId: "index-68220",
+            storageBucket: "index-68220.firebasestorage.app",
+            messagingSenderId: "633087068802",
+            appId: "1:633087068802:web:f8aa1f2ef9c00b99d1429b",
+            measurementId: "G-2VQCRFJQCM"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
+        const TASKS_PATH = 'tasks_only';
+        const TASKS_REF = database.ref(TASKS_PATH);
+
+        const addTaskModalOverlay = document.getElementById('addTaskModalOverlay');
+        const newTitleInput = document.getElementById('newTitle');
+        const saveNewTaskBtn = document.getElementById('saveNewTaskBtn');
+        const cancelNewTaskBtn = document.getElementById('cancelNewTaskBtn'); 
+
+        const tasksGrid = document.getElementById('tasksGrid');
+        const editModalOverlay = document.getElementById('editModalOverlay');
+        const editTaskId = document.getElementById('editTaskId');
+        const editTitleInput = document.getElementById('editTitle');
+        const doneEditBtn = document.getElementById('doneEditBtn');
+        const cancelEditBtn = document.getElementById('cancelEditBtn'); 
+
+        const confirmationModal = document.getElementById('confirmationModal');
+        const confirmationMessage = document.getElementById('confirmationMessage');
+        const confirmOK = document.getElementById('confirmOK');
+        const confirmCancel = document.getElementById('confirmCancel');
+
+        let allTasks = {}; 
+        let currentConfirmationCallback = null;
+        const LONG_PRESS_DURATION = 500;
+
+        function autoLink(text) {
+            const urlRegex = /(\b(https?:\/\/\S+)|(www\.\S+))/g;
+            return text.replace(urlRegex, function(url) {
+                let fullUrl = url;
+                if (!url.match(/^https?:\/\//i)) {
+                    fullUrl = 'http://' + url;
+                }
+                return `<a href="${fullUrl}" target="_blank" onclick="event.stopPropagation();">${url}</a>`;
+            });
+        }
+
+        function formatTimestamp(isoString) {
+            if (!isoString) return '';
+            try {
+                const date = new Date(isoString);
+                if (isNaN(date.getTime())) return '';
+                
+                const options = { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                };
+                return date.toLocaleTimeString('id-ID', options);
+            } catch (e) {
+                return '';
+            }
+        }
+        
+        function showConfirmation(message, onConfirm, onCancel = () => {}, isDestructive = true) {
+            confirmationMessage.textContent = message;
+            confirmCancel.style.display = 'block';
+
+            confirmOK.style.backgroundColor = 'var(--accent-color)';
+            confirmOK.onmouseover = () => confirmOK.style.backgroundColor = 'var(--secondary-text)'; 
+            confirmOK.onmouseout = () => confirmOK.style.backgroundColor = 'var(--accent-color)';
+            confirmOK.style.color = 'var(--main-bg)';
+            confirmOK.style.border = '1px solid var(--accent-color)';
+
+            if (isDestructive) {
+                 confirmOK.textContent = 'HAPUS';
+            } else {
+                 confirmOK.textContent = 'OK';
+            }
+
+            currentConfirmationCallback = { onConfirm, onCancel };
+            confirmationModal.classList.add('active');
+        }
+
+        confirmOK.onclick = () => {
+            confirmationModal.classList.remove('active');
+            if (currentConfirmationCallback && currentConfirmationCallback.onConfirm) {
+                currentConfirmationCallback.onConfirm(true);
+            }
+        };
+
+        confirmCancel.onclick = () => {
+            confirmationModal.classList.remove('active');
+            if (currentConfirmationCallback && currentConfirmationCallback.onCancel) {
+                currentConfirmationCallback.onCancel(false);
+            }
+        };
+
+        function showAlert(message) {
+            showConfirmation(message, () => {}, () => {}, false);
+            confirmCancel.style.display = 'none';
+            confirmOK.textContent = 'TUTUP';
+
+            const originalOkHandler = confirmOK.onclick;
+
+            const tempOkHandler = () => {
+                confirmationModal.classList.remove('active');
+                confirmCancel.style.display = 'block';
+                confirmOK.textContent = 'OK';
+                confirmOK.onclick = originalOkHandler;
+                confirmOK.style.backgroundColor = 'var(--accent-color)';
+                confirmOK.onmouseover = () => confirmOK.style.backgroundColor = 'var(--secondary-text)';
+                confirmOK.onmouseout = () => confirmOK.style.backgroundColor = 'var(--accent-color)';
+                confirmOK.style.border = '1px solid var(--accent-color)';
+            };
+
+            confirmOK.onclick = tempOkHandler;
+        }
+
+        window.openAddTaskModal = function() {
+            editModalOverlay.classList.remove('active');
+            newTitleInput.value = '';
+            
+            addTaskModalOverlay.classList.add('active');
+            setTimeout(() => {
+                newTitleInput.focus();
+            }, 350);
+        }
+
+        function saveNewTask() {
+            const title = newTitleInput.value.trim();
+
+            if (title === "") {
+                showAlert("[ERROR] Judul task tidak boleh kosong.");
+                return;
+            }
+
+            const currentTimestamp = new Date().toISOString();
+
+            TASKS_REF.push({
+                title: title,
+                timestamp: currentTimestamp
+            })
+            .then(() => {
+                addTaskModalOverlay.classList.remove('active');
+            })
+            .catch(error => console.error("[ERROR] Gagal menambahkan task baru:", error));
+        }
+
+        saveNewTaskBtn.addEventListener('click', saveNewTask);
+        cancelNewTaskBtn.addEventListener('click', () => {
+             addTaskModalOverlay.classList.remove('active');
+        });
+
+        window.openEditModal = function(taskId) {
+            const taskData = allTasks[taskId];
+            if (!taskData) return;
+
+            addTaskModalOverlay.classList.remove('active');
+
+            editTaskId.value = taskId;
+            editTitleInput.value = taskData.title || '';
+            
+            editModalOverlay.classList.add('active');
+            setTimeout(() => {
+                editTitleInput.focus();
+                editTitleInput.setSelectionRange(editTitleInput.value.length, editTitleInput.value.length);
+            }, 350);
+        }
+
+        window.saveEditTask = function() {
+            const taskId = editTaskId.value;
+            const newTitle = editTitleInput.value.trim();
+
+            if (!taskId) return;
+
+            if (newTitle === "") {
+                 showConfirmation("[WARNING] Judul task kosong. Hapus task ini?", (confirmed) => {
+                     if (confirmed) {
+                         TASKS_REF.child(taskId).remove();
+                         editModalOverlay.classList.remove('active');
+                     }
+                 }, () => {
+                 }, true);
+                 return;
+            }
+
+            TASKS_REF.child(taskId).update({
+                title: newTitle,
+                timestamp: new Date().toISOString()
+            })
+            .then(() => {
+                editModalOverlay.classList.remove('active');
+            })
+            .catch(error => console.error("[ERROR] Gagal menyimpan task:", error));
+        }
+
+        doneEditBtn.addEventListener('click', saveEditTask);
+        cancelEditBtn.addEventListener('click', () => {
+             editModalOverlay.classList.remove('active');
+        });
+
+        window.deleteTask = function(taskId) {
+            showConfirmation("Yakin ingin menghapus task ini?", (confirmed) => {
+                if (confirmed) {
+                    TASKS_REF.child(taskId).remove()
+                        .catch(error => console.error("[ERROR] Gagal menghapus task:", error));
+                }
+            }, null, true);
+        }
+        
+        function renderTasks() {
+            tasksGrid.innerHTML = '';
+
+            const taskKeys = Object.keys(allTasks).sort((a, b) => {
+                const timeA = allTasks[a].timestamp || new Date(0).toISOString();
+                const timeB = allTasks[b].timestamp || new Date(0).toISOString();
+                return timeB.localeCompare(timeA);
+            });
+
+            const deleteIconTask = `<svg style="width:20px;height:20px" viewBox="0 0 24 24"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z" /></svg>`;
+            
+            if (taskKeys.length === 0) {
+                 tasksGrid.innerHTML = `<p style="color: var(--secondary-text); padding: 20px; text-align: center;">[INFO] Tidak ada task. Klik '+' untuk menambahkan task baru.</p>`;
+                 return;
+            }
+
+            taskKeys.forEach(taskId => {
+                const taskData = allTasks[taskId];
+
+                const linkedTitle = autoLink(taskData.title);
+                const timestampFormatted = formatTimestamp(taskData.timestamp);
+
+                const card = document.createElement('div');
+                card.className = 'task-card';
+                card.id = taskId;
+
+                card.ondblclick = () => openEditModal(taskId);
+
+                card.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    if (pressTimer) clearTimeout(pressTimer);
+
+                    pressTimer = setTimeout(() => {
+                        openEditModal(taskId);
+                        clearTimeout(pressTimer);
+                        pressTimer = null;
+                    }, LONG_PRESS_DURATION);
+                });
+
+                const clearTimer = () => {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                };
+                card.addEventListener('touchend', (e) => {
+                    if (pressTimer) {
+                        clearTimer();
+                        openEditModal(taskId);
+                    }
+                });
+                card.addEventListener('touchmove', clearTimer);
+
+
+                card.innerHTML = `
+                    <button class="delete-btn" title="Hapus Task" onclick="event.stopPropagation(); deleteTask('${taskId}')">
+                        ${deleteIconTask}
+                    </button>
+                    <h3 class="task-card-title">${linkedTitle}</h3>
+                    <span class="task-timestamp">Last Edit: ${timestampFormatted}</span>
+                `;
+
+                tasksGrid.appendChild(card);
+            });
+        }
+
+        TASKS_REF.on('value', (snapshot) => {
+            allTasks = snapshot.val() || {};
+            renderTasks();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (editModalOverlay.classList.contains('active')) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    saveEditTask(); 
+                }
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancelEditBtn.click();
+                }
+            } else if (addTaskModalOverlay.classList.contains('active')) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    saveNewTask(); 
+                }
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancelNewTaskBtn.click(); 
+                }
+            }
+        });
+    </script>
+
+    <script>
+   function callVelionModal(modalType) {
+    let messageType = '';
+
+    switch (modalType.toUpperCase()) {
+        case 'SEARCH':
+            messageType = 'OPEN_SEARCH_MODAL';
+            break;
+        case 'LOGIN': 
+            messageType = 'OPEN_LOGIN_MODAL';
+            break;
+        case 'CHANGE_CREDS': 
+            messageType = 'OPEN_CHANGE_CREDS_MODAL';
+            break;
+        default:
+            return;
+    }
+
+    window.parent.postMessage({ type: messageType }, '*'); 
+}
+
+function checkAccessAndBlock() {
+    const isLoggedIn = localStorage.getItem('velionLoggedIn') === 'true';
+
+    if (!isLoggedIn) {
+        document.body.style.display = 'flex';
+        document.body.style.justifyContent = 'center';
+        document.body.style.alignItems = 'center';
+        document.body.style.height = '100vh';
+        document.body.style.flexDirection = 'column';
+        document.body.style.fontFamily = 'monospace';
+        document.body.style.color = '#FF6347';
+        document.body.style.backgroundColor = '#0A0A0A';
+        document.body.innerHTML = `
+            <h1 style="text-shadow: 0 0 5px #FF6347;">[ ACCESS DENIED ]</h1>
+            <p>Sesi VΞLION tidak ditemukan. Tekan Ctrl + L di halaman utama untuk login.</p>
+            <button onclick="callVelionModal('LOGIN')" style="padding: 10px 20px; background: #00E0A3; color: #0A0A0A; border: none; cursor: pointer; margin-top: 15px;">LOGIN VΞLION</button>
+        `;
+        
+        return false; 
+    }
+    
+    return true;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!checkAccessAndBlock()) {
+        return; 
+    }
+    
+});
+</script>
+</body>
+</html>
