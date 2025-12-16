@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VΞLION KEEP</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root {
+            --accent-color: #00FF00;
+            --accent-light: #004d00;
+            --main-bg: #1e1e1e;
+            --paper-bg: #2d2d2d;
+            --text-color: #00FF00;
+            --secondary-text: #009900;
+            --border-color: #005500;
+            --soft-shadow: 0 4px 8px rgba(0, 255, 0, 0.2);
+            --delete-color: #FF4444;
+            --sidebar-width: 280px;
+
+            --neumo-light: #3a3a3a;
+            --neumo-dark: #101010;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: var(--main-bg);
+            margin: 0;
+            padding: 0;
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            min-width: var(--sidebar-width);
+            background-color: var(--main-bg); 
+            border-right: 1px solid var(--border-color); 
+            padding-top: 25px;
+            box-shadow: none; 
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .sidebar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .folder-list-sidebar { list-style: none; padding: 0; margin: 0; flex-grow: 1; }
+        .folder-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 25px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            border-radius: 0;
+            margin-right: 0;
+            border: 1px solid var(--border-color);
+            border-right: none;
+            margin-bottom: 5px; 
+            background-color: var(--paper-bg);
+        }
+        .folder-item:hover { 
+            background-color: var(--accent-light);
+            color: var(--accent-color);
+        }
+        .folder-item.active { 
+            background-color: var(--accent-color);
+            font-weight: 700; 
+            color: var(--main-bg);
+            border-color: var(--accent-color);
+        }
+        .folder-item.active .folder-name svg {
+             fill: var(--main-bg);
+        }
+        .folder-name { display: flex; align-items: center; gap: 10px; }
+        .folder-name svg {
+            fill: var(--accent-color);
+        }
+        .folder-item.active .delete-folder-btn { color: var(--main-bg); }
+        .delete-folder-btn {
+            background: none; border: none; color: var(--secondary-text); cursor: pointer;
+            font-size: 0.9rem; padding: 5px; line-height: 1; transition: opacity 0.2s, color 0.2s;
+            border-radius: 50%; opacity: 0.5; margin-left: 10px; width: 30px; height: 30px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .folder-item:hover .delete-folder-btn { opacity: 1; }
+        .delete-folder-btn:hover { color: var(--delete-color); background-color: var(--neumo-dark); }
+        .folder-creator { padding: 20px 25px; border-top: 1px solid var(--border-color); }
+        .folder-creator input {
+            width: 100%; padding: 10px; border: 1px solid var(--border-color);
+            border-radius: 0; margin-bottom: 10px; outline: none;
+            background-color: var(--paper-bg); color: var(--text-color);
+            font-family: 'Roboto Mono', monospace;
+        }
+        .folder-creator button {
+            width: 100%; padding: 10px; background-color: var(--accent-color);
+            color: var(--main-bg); border: none; border-radius: 0; cursor: pointer;
+            font-weight: 700; transition: background-color 0.2s;
+            font-family: 'Roboto Mono', monospace;
+        }
+        .folder-creator button:hover { background-color: var(--secondary-text); color: var(--text-color); }
+
+        .main-container { flex-grow: 1; display: flex; flex-direction: column; }
+        .header {
+            background-color: var(--main-bg); 
+            border-bottom: 1px solid var(--border-color); 
+            padding: 8px 30px;
+            display: flex; align-items: center; 
+            box-shadow: none; 
+            position: sticky; top: 0; z-index: 900; 
+            margin-bottom: 30px;
+        }
+        .header h1 { 
+            margin: 0; 
+            font-weight: 400; 
+            flex-grow: 1; 
+            display: flex; 
+            align-items: center;
+        }
+        
+        .active-header-chip {
+            background-color: var(--accent-color); 
+            color: var(--main-bg); 
+            padding: 6px 10px; 
+            border-radius: 0; 
+            font-size: 1rem; 
+            font-weight: 700;
+        }
+        
+        #menuButton {
+            background: none; 
+            border: 1px solid var(--accent-color); 
+            color: var(--accent-color);
+            font-size: 1.5rem; 
+            cursor: pointer; 
+            padding: 5px; 
+            line-height: 1; 
+            transition: color 0.2s, background-color 0.2s; 
+            display: none; 
+            border-radius: 0;
+            margin-right: 15px;
+        }
+        #menuButton:hover {
+             background-color: var(--accent-light);
+             color: var(--text-color);
+        }
+
+        #addNoteButton {
+            width: 30px;
+            height: 30px;
+            border-radius: 0;
+            background-color: var(--accent-color);
+            color: var(--main-bg);
+            border: 1px solid var(--accent-color);
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: none;
+            margin-left: 10px;
+        }
+        #addNoteButton:hover { background-color: var(--secondary-text); color: var(--text-color); transform: scale(1.05); }
+        #addNoteButton svg { 
+            width: 16px;
+            height: 16px;
+        }
+        .content { padding: 0 30px; flex-grow: 1; }
+
+        #notesGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding-bottom: 50px;
+            max-width: none;
+            margin: 0;
+        }
+        .note-card {
+            padding: 18px; 
+            border-radius: 0; 
+            background-color: var(--paper-bg);
+            border: 1px solid var(--border-color);
+            box-shadow: 
+                3px 3px 6px var(--neumo-dark),
+                -3px -3px 6px var(--neumo-light);
+            transition: box-shadow 0.3s, transform 0.3s; 
+            word-wrap: break-word;
+            height: auto;
+            min-height: 100px;
+            overflow: hidden; 
+            position: relative; cursor: pointer;
+        }
+        .note-card:hover { 
+            box-shadow: none;
+            border-color: var(--accent-color);
+            transform: translateY(0); 
+        }
+        .note-card a { color: var(--accent-color); text-decoration: underline; }
+        .note-card-title {
+            margin: 0 0 10px 0; font-size: 1.2rem; font-weight: 700;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            color: var(--accent-color);
+        }
+        .note-card-content {
+            margin: 0; font-size: 0.95rem; color: var(--secondary-text);
+            white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 10;
+            -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;
+            line-height: 1.5;
+        }
+        
+        .note-card-footer { 
+            display: flex; 
+            justify-content: flex-end; 
+            align-items: center;
+            gap: 10px; 
+            padding-top: 10px; margin-top: 10px;
+            border-top: 1px solid var(--border-color); 
+            font-size: 0.75rem; 
+        }
+
+        .folder-chip {
+            background-color: #008800;
+            color: var(--text-color); 
+            padding: 4px 8px; 
+            border-radius: 0; 
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .note-timestamp {
+            color: var(--secondary-text);
+            white-space: nowrap;
+        }
+
+        .delete-btn {
+            position: absolute; top: 8px; right: 8px; background: none; border: none;
+            color: var(--delete-color); cursor: pointer; font-size: 1.1rem; opacity: 0;
+            transition: opacity 0.2s; z-index: 20; padding: 5px; border-radius: 0;
+        }
+        .note-card:hover .delete-btn { opacity: 1; background-color: var(--neumo-dark); }
+        .delete-btn:hover { background-color: var(--neumo-light); }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); display: none; justify-content: center;
+            align-items: center; z-index: 2000;
+        }
+        .modal-content {
+            background-color: var(--paper-bg); 
+            border-radius: 0;
+            border: 1px solid var(--accent-color);
+            box-shadow: var(--soft-shadow); width: 90%; padding: 25px;
+            position: relative; transform: scale(0.95); opacity: 0;
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease-out;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-overlay.active .modal-content { transform: scale(1); opacity: 1; }
+        #confirmationModal .modal-content { max-width: 380px; text-align: center; padding: 30px; }
+        .modal-actions { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+        .modal-btn {
+            padding: 10px 20px; border: 1px solid var(--accent-color); border-radius: 0;
+            font-weight: 700; cursor: pointer; transition: background-color 0.2s, opacity 0.2s;
+            text-transform: uppercase;
+            font-family: 'Roboto Mono', monospace;
+        }
+        .modal-btn.action-cancel { background-color: var(--paper-bg); color: var(--secondary-text); }
+        .modal-btn.action-cancel:hover { background-color: var(--neumo-dark); color: var(--text-color); }
+
+        .modal-btn.action-safe { background-color: var(--accent-color); color: var(--main-bg); }
+        .modal-btn.action-safe:hover { background-color: var(--secondary-text); color: var(--text-color); }
+        
+        #editNoteTitle, #newNoteTitle {
+            font-family: 'Roboto Mono', monospace; font-weight: 700; font-size: 2.2rem;
+            border: none; outline: none; width: 100%; padding: 10px 0;
+            margin-bottom: 5px; border-bottom: 1px solid var(--border-color); resize: none;
+            background-color: var(--paper-bg);
+            color: var(--accent-color);
+        }
+        #editNoteContent, #newNoteContent {
+            font-family: 'Roboto Mono', monospace; font-size: 1.1rem; line-height: 1.8;
+            padding: 15px 0; font-weight: 400; border: none; outline: none;
+            width: 100%; flex-grow: 1; min-height: 300px; max-height: 70vh; overflow-y: auto; resize: none;
+            background-color: var(--paper-bg);
+            color: var(--text-color);
+        }
+        #modalFooter, #addModalFooter {
+            display: flex; justify-content: flex-end; align-items: center;
+            padding-top: 10px; border-top: 1px solid var(--border-color); margin-top: 10px;
+            gap: 15px;
+        }
+        
+        #editModalContent, #addNoteModalContent {
+            max-width: 900px; min-height: 500px; padding: 20px 30px;
+        }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar {
+                position: fixed; top: 0; left: 0; width: 70%; min-width: 70%; height: 100%;
+                transform: translateX(-100%); transition: transform 0.3s ease-out;
+                box-shadow: 4px 0 10px rgba(0, 0, 0, 0.4);
+                padding-top: 55px;
+                border-right: 1px solid var(--accent-color);
+            }
+            .sidebar.active { transform: translateX(0); }
+            .main-container { width: 100%; }
+            .header { padding: 5px 15px; } 
+            
+            #menuButton { 
+                display: block; 
+            }
+            
+            .content { padding: 0 15px; }
+            #notesGrid { grid-template-columns: 1fr; gap: 15px; max-width: 100%; margin: 0; }
+            .note-card { 
+                min-height: 150px; padding: 15px; 
+                box-shadow: 1px 1px 3px var(--neumo-dark), -1px -1px 3px var(--neumo-light);
+            }
+            .delete-folder-btn { opacity: 1; }
+            #editModalContent, #addNoteModalContent { padding: 15px; min-height: 400px; }
+            #editNoteTitle, #newNoteTitle { font-size: 1.5rem; }
+            #editNoteContent, #newNoteContent { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar" id="sidebar">
+        <ul class="folder-list-sidebar" id="folderList"></ul>
+        <div class="folder-creator">
+            <input type="text" id="newFolderName" placeholder="Folder Baru">
+            <button onclick="addFolder()">Buat Folder</button>
+        </div>
+    </nav>
+
+    <div class="main-container">
+
+        <header class="header">
+            <button id="menuButton" onclick="toggleSidebar(true)">☰</button>
+            <h1 id="activeFolderHeader"></h1> 
+            <button id="addNoteButton" title="Tambah Catatan Baru" onclick="openAddNoteModal()">
+                 <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" /></svg>
+            </button>
+        </header>
+
+        <div class="modal-overlay" id="addNoteModalOverlay">
+            <div class="modal-content" id="addNoteModalContent">
+                <textarea id="newNoteTitle" placeholder="Judul Catatan Baru" rows="1"></textarea>
+                <textarea id="newNoteContent" placeholder="Tulis catatan Anda di sini..." rows="8"></textarea>
+                <div id="addModalFooter">
+                    <button class="modal-btn action-cancel" id="cancelNewNoteBtn">Batal</button> 
+                    <button class="modal-btn action-safe" id="saveNewNoteBtn">Simpan</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="editModalOverlay">
+            <div class="modal-content" id="editModalContent">
+                <input type="hidden" id="editNoteId">
+                <textarea id="editNoteTitle" placeholder="Judul Catatan" rows="1"></textarea>
+                <textarea id="editNoteContent" placeholder="Tulis catatan Anda di sini..." rows="8"></textarea>
+                <div id="modalFooter">
+                    <button class="modal-btn action-cancel" id="cancelEditBtn">Batal</button>
+                    <button class="modal-btn action-safe" id="doneEditBtn">Simpan</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="confirmationModal">
+            <div class="modal-content">
+                <p id="confirmationMessage"></p>
+                <div class="modal-actions">
+                    <button class="modal-btn action-cancel" id="confirmCancel">Batal</button>
+                    <button class="modal-btn action-safe" id="confirmOK">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <main class="content">
+            <div class="notes-grid" id="notesGrid"></div>
+        </main>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCba6M_spBXvuG91Zn-XWJ4bSTX6vNcST0",
+            authDomain: "index-68220.firebaseapp.com",
+            databaseURL: "https://index-68220-default-rtdb.firebaseio.com",
+            projectId: "index-68220",
+            storageBucket: "index-68220.firebasestorage.app",
+            messagingSenderId: "633087068802",
+            appId: "1:633087068802:web:f8aa1f2ef9c00b99d1429b",
+            measurementId: "G-2VQCRFJQCM"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const notesRef = database.ref('notes');
+        const foldersRef = database.ref('folders');
+
+        const addNoteModalOverlay = document.getElementById('addNoteModalOverlay');
+        const newNoteTitleInput = document.getElementById('newNoteTitle');
+        const newNoteContentInput = document.getElementById('newNoteContent');
+        const saveNewNoteBtn = document.getElementById('saveNewNoteBtn');
+        const cancelNewNoteBtn = document.getElementById('cancelNewNoteBtn'); 
+
+        const notesGrid = document.getElementById('notesGrid');
+        const folderList = document.getElementById('folderList');
+        const newFolderNameInput = document.getElementById('newFolderName');
+        const sidebar = document.getElementById('sidebar');
+        const activeFolderHeader = document.getElementById('activeFolderHeader');
+        const editModalOverlay = document.getElementById('editModalOverlay');
+        const editModalContent = document.getElementById('editModalContent');
+        const editNoteId = document.getElementById('editNoteId');
+        const editNoteTitle = document.getElementById('editNoteTitle');
+        const editNoteContent = document.getElementById('editNoteContent');
+        const doneEditBtn = document.getElementById('doneEditBtn');
+        const cancelEditBtn = document.getElementById('cancelEditBtn'); 
+
+        const confirmationModal = document.getElementById('confirmationModal');
+        const confirmationMessage = document.getElementById('confirmationMessage');
+        const confirmOK = document.getElementById('confirmOK');
+        const confirmCancel = document.getElementById('confirmCancel');
+
+        const DEFAULT_FILTER_NAME = 'Semua Catatan';
+        let currentFilter = DEFAULT_FILTER_NAME;
+        let allNotes = {};
+        let availableFolders = {};
+
+        let currentConfirmationCallback = null;
+        let pressTimer = null;
+        const LONG_PRESS_DURATION = 500;
+
+        function autoLink(text) {
+            const urlRegex = /(\b(https?:\/\/\S+)|(www\.\S+))/g;
+            return text.replace(urlRegex, function(url) {
+                let fullUrl = url;
+                if (!url.match(/^https?:\/\//i)) {
+                    fullUrl = 'http://' + url;
+                }
+                return `<a href="${fullUrl}" target="_blank" onclick="event.stopPropagation();">${url}</a>`;
+            });
+        }
+
+        function updateHeaderTitle() {
+            activeFolderHeader.innerHTML = `<span class="active-header-chip">${currentFilter}</span>`;
+        }
+
+        function formatTimestamp(isoString) {
+            if (!isoString) return '';
+            try {
+                const date = new Date(isoString);
+                if (isNaN(date.getTime())) return '';
+                
+                const options = { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                };
+                return date.toLocaleTimeString('id-ID', options);
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function showConfirmation(message, onConfirm, onCancel = () => {}, isDestructive = true) {
+            confirmationMessage.textContent = message;
+
+            confirmOK.classList.remove('action-safe');
+            confirmOK.classList.remove('action-cancel');
+            confirmCancel.style.display = 'block';
+
+            if (isDestructive) {
+                 confirmOK.style.backgroundColor = 'var(--delete-color)';
+                 confirmOK.onmouseover = () => confirmOK.style.backgroundColor = '#d32f2f';
+                 confirmOK.onmouseout = () => confirmOK.style.backgroundColor = 'var(--delete-color)';
+                 confirmOK.style.color = 'var(--main-bg)';
+                 confirmOK.textContent = 'HAPUS';
+                 confirmOK.style.border = '1px solid var(--delete-color)';
+            } else {
+                 confirmOK.classList.add('action-safe');
+                 confirmOK.style.backgroundColor = 'var(--accent-color)';
+                 confirmOK.onmouseover = () => confirmOK.style.backgroundColor = 'var(--secondary-text)'; 
+                 confirmOK.onmouseout = () => confirmOK.style.backgroundColor = 'var(--accent-color)';
+                 confirmOK.style.color = 'var(--main-bg)';
+                 confirmOK.textContent = 'OK';
+                 confirmOK.style.border = '1px solid var(--accent-color)';
+            }
+
+            currentConfirmationCallback = { onConfirm, onCancel };
+            confirmationModal.classList.add('active');
+        }
+
+        confirmOK.onclick = () => {
+            confirmationModal.classList.remove('active');
+            if (currentConfirmationCallback && currentConfirmationCallback.onConfirm) {
+                currentConfirmationCallback.onConfirm(true);
+            }
+        };
+
+        confirmCancel.onclick = () => {
+            confirmationModal.classList.remove('active');
+            if (currentConfirmationCallback && currentConfirmationCallback.onCancel) {
+                currentConfirmationCallback.onCancel(false);
+            }
+        };
+
+        function showAlert(message) {
+            showConfirmation(message, () => {}, () => {}, false);
+
+            confirmCancel.style.display = 'none';
+            confirmOK.textContent = 'TUTUP';
+
+            const originalOkHandler = confirmOK.onclick;
+
+            const tempOkHandler = () => {
+                confirmationModal.classList.remove('active');
+                confirmCancel.style.display = 'block';
+                confirmOK.textContent = 'OK';
+                confirmOK.onclick = originalOkHandler;
+                confirmOK.style.backgroundColor = 'var(--accent-color)';
+                confirmOK.onmouseover = () => confirmOK.style.backgroundColor = 'var(--secondary-text)';
+                confirmOK.onmouseout = () => confirmOK.style.backgroundColor = 'var(--accent-color)';
+                confirmOK.style.border = '1px solid var(--accent-color)';
+            };
+
+            confirmOK.onclick = tempOkHandler;
+        }
+
+        window.toggleSidebar = function(show) {
+             if (window.innerWidth > 768) return;
+            if (show) {
+                sidebar.classList.add('active');
+            } else {
+                sidebar.classList.remove('active');
+            }
+        }
+
+        document.body.addEventListener('click', (event) => {
+            if (window.innerWidth <= 768 && sidebar.classList.contains('active') && !sidebar.contains(event.target) && event.target.id !== 'menuButton' && event.target.id !== 'addNoteButton') {
+                toggleSidebar(false);
+            }
+        });
+
+        window.addFolder = function() {
+            const newName = newFolderNameInput.value.trim();
+            if (newName && newName !== DEFAULT_FILTER_NAME && !availableFolders.hasOwnProperty(newName)) {
+                foldersRef.child(newName).set(true)
+                .then(() => {
+                    newFolderNameInput.value = '';
+                });
+            } else {
+                showAlert(`Nama folder tidak valid atau sudah ada.`);
+            }
+        };
+
+        window.deleteFolder = function(folderName) {
+            showConfirmation(`Yakin ingin menghapus folder '${folderName}'? SEMUA catatan di dalamnya akan dipindahkan ke '${DEFAULT_FILTER_NAME}'.`, (confirmed) => {
+                if (confirmed) {
+                    notesRef.once('value', (snapshot) => {
+                        const notes = snapshot.val();
+                        if (notes) {
+                            const updates = {};
+                            Object.keys(notes).forEach(noteId => {
+                                if (notes[noteId].folder === folderName) {
+                                    updates[noteId + '/folder'] = null;
+                                }
+                            });
+
+                            if (Object.keys(updates).length > 0) {
+                                notesRef.update(updates)
+                                    .catch(error => console.error("Gagal memindahkan catatan di folder:", error));
+                            }
+                        }
+                    }).then(() => {
+                        foldersRef.child(folderName).remove()
+                        .then(() => {
+                            if (currentFilter === folderName) {
+                                filterNotes(DEFAULT_FILTER_NAME);
+                            }
+                        })
+                        .catch(error => console.error("Gagal menghapus folder:", error));
+                    });
+                }
+            }, null, true);
+        };
+
+        function renderFolders(folders) {
+            availableFolders = folders || {};
+            folderList.innerHTML = '';
+
+            const noteIcon = `<svg style="width:24px;height:24px" viewBox="0 0 24 24"><path fill="currentColor" d="M19,3H5C3.89,3 3,3.89 3,5V19C3,20.11 3.89,21 5,21H19C20.11,21 21,20.11 21,19V5C21,3.89 20.11,3 19,3M14.28,15.71L17.5,12.5L14.28,9.29L12.5,11L10.72,9.29L7.5,12.5L10.72,15.71L12.5,13.92L14.28,15.71Z" /></svg>`;
+            const folderIcon = `<svg style="width:24px;height:24px" viewBox="0 0 24 24"><path fill="currentColor" d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z" /></svg>`;
+            const deleteIcon = `<svg viewBox="0 0 24 24"><path fill="currentColor" d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9M7,6H17V19H7V6M9,8V17H11V8H9M13,8V17H15V8H13Z" /></svg>`;
+
+
+            folderList.innerHTML += `
+                <li class="folder-item ${currentFilter === DEFAULT_FILTER_NAME ? 'active' : ''}"
+                    data-folder="${DEFAULT_FILTER_NAME}" onclick="filterNotes('${DEFAULT_FILTER_NAME}'); toggleSidebar(false);">
+                    <span class="folder-name">${noteIcon} ${DEFAULT_FILTER_NAME}</span>
+                </li>`;
+
+            const folderNames = Object.keys(availableFolders).sort();
+
+            folderNames.forEach(folderName => {
+                const deleteButton = `
+                    <button class="delete-folder-btn" onclick="event.stopPropagation(); deleteFolder('${folderName}')" title="Hapus folder">
+                        ${deleteIcon}
+                    </button>`;
+
+                folderList.innerHTML += `
+                    <li class="folder-item ${currentFilter === folderName ? 'active' : ''}"
+                        data-folder="${folderName}" onclick="filterNotes('${folderName}'); toggleSidebar(false);">
+                        <span class="folder-name">${folderIcon} ${folderName}</span>
+                        ${deleteButton}
+                    </li>`;
+            });
+
+            updateHeaderTitle();
+        }
+
+        window.filterNotes = function(folderName) {
+            currentFilter = folderName;
+            renderFolders(availableFolders);
+            renderNotes();
+        }
+
+        foldersRef.on('value', (snapshot) => {
+            const firebaseFolders = snapshot.val() || {};
+            renderFolders(firebaseFolders);
+            renderNotes();
+        });
+
+        window.openEditModal = function(noteId) {
+            const noteData = allNotes[noteId];
+            if (!noteData) return;
+
+            addNoteModalOverlay.classList.remove('active');
+            toggleSidebar(false);
+
+            editNoteId.value = noteId;
+            editNoteTitle.value = noteData.title || '';
+            editNoteContent.value = noteData.content || '';
+
+            editModalOverlay.classList.add('active');
+            setTimeout(() => {
+                editNoteTitle.focus();
+                editNoteTitle.setSelectionRange(editNoteTitle.value.length, editNoteTitle.value.length);
+            }, 350);
+        }
+
+        window.saveEditNote = function() {
+            const noteId = editNoteId.value;
+            const newTitle = editNoteTitle.value.trim();
+            const newContent = editNoteContent.value.trim();
+
+            if (!noteId) return;
+
+            if (newTitle === "" && newContent === "") {
+                 showConfirmation("Judul dan isi catatan kosong. Hapus catatan ini?", (confirmed) => {
+                     if (confirmed) {
+                         database.ref('notes/' + noteId).remove();
+                         editModalOverlay.classList.remove('active');
+                     }
+                 }, () => {
+                 }, true);
+                 return;
+            }
+
+            const oldFolder = allNotes[noteId].folder || null;
+
+            notesRef.child(noteId).update({
+                title: newTitle || "Catatan Tanpa Judul",
+                content: newContent,
+                folder: oldFolder,
+                timestamp: new Date().toISOString()
+            })
+            .then(() => {
+                editModalOverlay.classList.remove('active');
+            })
+            .catch(error => console.error("Gagal menyimpan catatan:", error));
+        }
+
+        doneEditBtn.addEventListener('click', saveEditNote);
+
+        cancelEditBtn.addEventListener('click', () => {
+             editModalOverlay.classList.remove('active');
+        });
+
+
+        editModalContent.addEventListener('mousedown', (e) => { e.stopPropagation(); });
+        editModalContent.addEventListener('mouseup', (e) => { e.stopPropagation(); });
+
+        window.openAddNoteModal = function() {
+            editModalOverlay.classList.remove('active');
+            toggleSidebar(false);
+
+            newNoteTitleInput.value = '';
+            newNoteContentInput.value = '';
+
+            addNoteModalOverlay.classList.add('active');
+            setTimeout(() => {
+                newNoteTitleInput.focus();
+            }, 350);
+        }
+
+        function saveNewNote() {
+            const title = newNoteTitleInput.value.trim();
+            const content = newNoteContentInput.value.trim();
+
+            if (title === "" && content === "") {
+                showAlert("Judul dan isi catatan kosong. Simpan dibatalkan.");
+                return;
+            }
+
+            const finalFolder = currentFilter !== DEFAULT_FILTER_NAME ? currentFilter : null;
+            const currentTimestamp = new Date().toISOString();
+
+            notesRef.push({
+                title: title || "Catatan Tanpa Judul",
+                content: content,
+                folder: finalFolder,
+                timestamp: currentTimestamp
+            })
+            .then(() => {
+                addNoteModalOverlay.classList.remove('active');
+            })
+            .catch(error => console.error("Gagal menambahkan catatan baru:", error));
+        }
+
+        saveNewNoteBtn.addEventListener('click', saveNewNote);
+
+        cancelNewNoteBtn.addEventListener('click', () => {
+             addNoteModalOverlay.classList.remove('active');
+        });
+
+
+        window.deleteNote = function(noteId) {
+            showConfirmation("Yakin ingin menghapus catatan ini?", (confirmed) => {
+                if (confirmed) {
+                    database.ref('notes/' + noteId).remove()
+                        .catch(error => console.error("Gagal menghapus catatan:", error));
+                }
+            }, null, true);
+        }
+
+        window.moveNoteToFolder = function(noteId, targetFolder) {
+            const folderValue = (targetFolder === DEFAULT_FILTER_NAME || targetFolder === '') ? null : targetFolder;
+
+            notesRef.child(noteId).update({
+                folder: folderValue,
+                timestamp: new Date().toISOString()
+            })
+            .catch(error => console.error("Gagal memindahkan catatan:", error));
+        }
+
+
+        function renderNotes() {
+            notesGrid.innerHTML = '';
+
+            const noteKeys = Object.keys(allNotes).sort((a, b) => {
+                const timeA = allNotes[a].timestamp || new Date(0).toISOString();
+                const timeB = allNotes[b].timestamp || new Date(0).toISOString();
+                return timeB.localeCompare(timeA);
+            });
+
+            const deleteIconNote = `<svg style="width:20px;height:20px" viewBox="0 0 24 24"><path fill="currentColor" d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg>`;
+
+            noteKeys.forEach(noteId => {
+                const noteData = allNotes[noteId];
+
+                let shouldDisplay = false;
+
+                if (currentFilter === DEFAULT_FILTER_NAME) {
+                    if (!noteData.folder) {
+                        shouldDisplay = true;
+                    }
+                } else if (noteData.folder === currentFilter) {
+                    shouldDisplay = true;
+                }
+
+                if (shouldDisplay) {
+                    const linkedTitle = autoLink(noteData.title);
+                    const linkedContent = autoLink(noteData.content);
+                    const timestampFormatted = formatTimestamp(noteData.timestamp);
+
+                    let folderInfo = '';
+                    if (noteData.folder) {
+                        folderInfo = `<span class="folder-chip">${noteData.folder}</span>`;
+                    }
+                    
+                    let footerContent = '';
+                    if (folderInfo || timestampFormatted) {
+                        footerContent = `
+                            <div class="note-card-footer">
+                                ${folderInfo}
+                                <span class="note-timestamp">${timestampFormatted}</span>
+                            </div>
+                        `;
+                    }
+
+
+                    const card = document.createElement('div');
+                    card.className = 'note-card';
+                    card.id = noteId;
+
+                    card.ondblclick = () => openEditModal(noteId);
+
+                    card.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        if (pressTimer) clearTimeout(pressTimer);
+
+                        pressTimer = setTimeout(() => {
+                            openEditModal(noteId);
+                            clearTimeout(pressTimer);
+                            pressTimer = null;
+                        }, LONG_PRESS_DURATION);
+                    });
+
+                    const clearTimer = () => {
+                        clearTimeout(pressTimer);
+                        pressTimer = null;
+                    };
+                    card.addEventListener('touchend', (e) => {
+                        if (pressTimer) {
+                            clearTimer();
+                            openEditModal(noteId);
+                        }
+                    });
+                    card.addEventListener('touchmove', clearTimer);
+
+                    card.innerHTML = `
+                        <button class="delete-btn" title="Hapus Catatan" onclick="event.stopPropagation(); deleteNote('${noteId}')">
+                            ${deleteIconNote}
+                        </button>
+                        <h3 class="note-card-title">${linkedTitle}</h3>
+                        <p class="note-card-content">${linkedContent}</p>
+                        ${footerContent} `;
+
+                    notesGrid.appendChild(card);
+                }
+            });
+        }
+
+        notesRef.on('value', (snapshot) => {
+            allNotes = snapshot.val() || {};
+            renderNotes();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (editModalOverlay.classList.contains('active')) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    saveEditNote();
+                }
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancelEditBtn.click();
+                }
+            } else if (addNoteModalOverlay.classList.contains('active')) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    saveNewNote();
+                }
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancelNewNoteBtn.click();
+                }
+            }
+        });
+    </script>
+
+    <script>
+   function callVelionModal(modalType) {
+    let messageType = '';
+
+    switch (modalType.toUpperCase()) {
+        case 'SEARCH':
+            messageType = 'OPEN_SEARCH_MODAL';
+            break;
+        case 'LOGIN': 
+            messageType = 'OPEN_LOGIN_MODAL';
+            break;
+        case 'CHANGE_CREDS': 
+            messageType = 'OPEN_CHANGE_CREDS_MODAL';
+            break;
+        default:
+            return;
+    }
+
+    window.parent.postMessage({ type: messageType }, '*'); 
+}
+
+function checkAccessAndBlock() {
+    const isLoggedIn = localStorage.getItem('velionLoggedIn') === 'true';
+
+    if (!isLoggedIn) {
+        document.body.style.display = 'flex';
+        document.body.style.justifyContent = 'center';
+        document.body.style.alignItems = 'center';
+        document.body.style.height = '100vh';
+        document.body.style.flexDirection = 'column';
+        document.body.style.fontFamily = 'monospace';
+        document.body.style.color = '#FF6347';
+        document.body.style.backgroundColor = '#0A0A0A';
+        document.body.innerHTML = `
+            <h1 style="text-shadow: 0 0 5px #FF6347;">[ ACCESS DENIED ]</h1>
+            <p>Sesi VΞLION tidak ditemukan. Tekan Ctrl + L di halaman utama untuk login.</p>
+            <button onclick="callVelionModal('LOGIN')" style="padding: 10px 20px; background: #00E0A3; color: #0A0A0A; border: none; cursor: pointer; margin-top: 15px;">LOGIN VΞLION</button>
+        `;
+        
+        return false; 
+    }
+    
+    return true;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!checkAccessAndBlock()) {
+        return; 
+    }
+    
+});
+</script>
+
+</body>
+</html>
