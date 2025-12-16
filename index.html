@@ -60,13 +60,17 @@
             height: 100%;
             z-index: 10;
             background-color: var(--primary-bg);
+            position: relative; 
         }
         
-        #content-iframe {
+        .content-iframe-cached { 
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             border: none;
-            display: block;
+            display: none; 
             background-color: var(--primary-bg);
         }
 
@@ -269,7 +273,6 @@
     <div id="sidebar-overlay" class="sidebar-overlay"></div>
     
     <div id="mainContentContainer">
-        <iframe id="content-iframe" src="about:blank"></iframe>
     </div>
     
     <div id="instruction-text"></div>
@@ -343,6 +346,8 @@
         let CORRECT_USERNAME = ''; 
         let CORRECT_PASSWORD = ''; 
         let isCredentialsLoaded = false;
+        
+        const iframeCache = {}; 
 
         const searchModalOverlay = document.getElementById('search-modal-overlay');
         const searchInput = document.getElementById('search-input');
@@ -365,7 +370,6 @@
         const velionTitle = document.getElementById('velion-title');
         
         const mainContentContainer = document.getElementById('mainContentContainer');
-        const contentIframe = document.getElementById('content-iframe');
         
         let allApps = []; 
         let filteredApps = []; 
@@ -397,9 +401,13 @@
             velionTitle.style.display = 'block'; 
             
             mainContentContainer.style.display = 'none'; 
-            contentIframe.src = 'about:blank'; 
             
-            console.log("[LOGOUT] Session terminated. LocalStorage cleared.");
+            mainContentContainer.innerHTML = '';
+            for(const key in iframeCache) {
+                 delete iframeCache[key];
+            }
+            
+            console.log("[LOGOUT] Session terminated. LocalStorage cleared. Cached iframes cleared.");
         }
 
         function openLogoutModal() {
@@ -477,7 +485,8 @@
                 loginMessage.style.display = 'none';
                 
                 mainContentContainer.style.display = 'block'; 
-                
+                velionTitle.style.display = 'none'; 
+
                 console.log("[LOGIN] Access granted. Status saved to LocalStorage.");
 
             } else {
@@ -495,16 +504,45 @@
             searchInput.focus();
         }
         
+        function hideAllIframes() {
+            const iframes = mainContentContainer.querySelectorAll('.content-iframe-cached');
+            iframes.forEach(iframe => {
+                iframe.style.display = 'none';
+            });
+        }
+        
+        function urlToId(url) {
+            return 'iframe-' + btoa(url).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+        }
+
         function navigateToApp(url) {
-            if (url) {
-                contentIframe.src = url; 
+            if (!url || url === 'about:blank') return;
+            
+            const urlKey = urlToId(url);
+            let targetIframe = iframeCache[urlKey];
+
+            hideAllIframes(); 
+
+            if (!targetIframe) {
+                targetIframe = document.createElement('iframe');
+                targetIframe.className = 'content-iframe-cached';
+                targetIframe.id = urlKey;
+                targetIframe.src = url; 
                 
-                mainContentContainer.style.display = 'block'; 
+                mainContentContainer.appendChild(targetIframe);
+                iframeCache[urlKey] = targetIframe;
                 
-                closeModal(searchModalOverlay);
-                
-                console.log(`[NAVIGASI] Memuat: ${url} ke dalam Iframe.`);
+                console.log(`[NAVIGASI] Iframe BARU DIBUAT dan dimuat: ${url}`);
+            } else {
+                console.log(`[NAVIGASI] Menggunakan iframe CACHED untuk: ${url}`);
             }
+
+            targetIframe.style.display = 'block';
+            
+            mainContentContainer.style.display = 'block'; 
+            velionTitle.style.display = 'none'; 
+            
+            closeModal(searchModalOverlay);
         }
         
         function filterApps(query) {
@@ -518,12 +556,15 @@
 
             renderResults(filteredApps);
             selectedIndex = -1; 
+            
+            updateSelection();
         }
 
         function renderResults(results) {
             searchResultsContainer.innerHTML = '';
             if (results.length === 0) {
                 searchResultsContainer.innerHTML = `<p style="padding: 15px 20px; color:var(--subtle-text);">[ NOT FOUND ] No results for "${searchInput.value}"</p>`;
+                selectedIndex = -1; 
                 return;
             }
 
@@ -549,13 +590,12 @@
             
             if (results.length > 0) {
                  selectedIndex = 0;
-                 updateSelection();
             }
         }
 
         function updateSelection() {
             const items = document.querySelectorAll('.search-result-item');
-            if (items.length === 0) return;
+            if (items.length === 0 || selectedIndex === -1) return;
 
             if (selectedIndex >= items.length) selectedIndex = 0;
             if (selectedIndex < 0) selectedIndex = items.length - 1;
@@ -773,6 +813,7 @@
              
              if (isLoggedIn) {
                  mainContentContainer.style.display = 'block';
+                 velionTitle.style.display = 'none'; 
              } else {
                  velionTitle.style.display = 'block';
                  mainContentContainer.style.display = 'none';
