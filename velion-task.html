@@ -514,57 +514,29 @@
         });
     </script>
 
-    <script>
-   function callVelionModal(modalType) {
-    let messageType = '';
-
-    switch (modalType.toUpperCase()) {
-        case 'SEARCH':
-            messageType = 'OPEN_SEARCH_MODAL';
-            break;
-        case 'LOGIN': 
-            messageType = 'OPEN_LOGIN_MODAL';
-            break;
-        case 'CHANGE_CREDS': 
-            messageType = 'OPEN_CHANGE_CREDS_MODAL';
-            break;
-        default:
-            return;
+<script>
+    function sendActionToParent(actionType) {
+        if (window.parent !== window) {
+            window.parent.postMessage({
+                type: actionType
+            }, '*'); 
+        }
     }
 
-    window.parent.postMessage({ type: messageType }, '*'); 
-}
-
-function checkAccessAndBlock() {
-    const isLoggedIn = localStorage.getItem('velionLoggedIn') === 'true';
-
-    if (!isLoggedIn) {
-        document.body.style.display = 'flex';
-        document.body.style.justifyContent = 'center';
-        document.body.style.alignItems = 'center';
-        document.body.style.height = '100vh';
-        document.body.style.flexDirection = 'column';
-        document.body.style.fontFamily = 'monospace';
-        document.body.style.color = '#FF6347';
-        document.body.style.backgroundColor = '#0A0A0A';
-        document.body.innerHTML = `
-            <h1 style="text-shadow: 0 0 5px #FF6347;">[ ACCESS DENIED ]</h1>
-            <p>Sesi VΞLION tidak ditemukan. Tekan Ctrl + L di halaman utama untuk login.</p>
-            <button onclick="callVelionModal('LOGIN')" style="padding: 10px 20px; background: #00E0A3; color: #0A0A0A; border: none; cursor: pointer; margin-top: 15px;">LOGIN VΞLION</button>
-        `;
-        
-        return false; 
-    }
-    
-    return true;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    if (!checkAccessAndBlock()) {
-        return; 
-    }
-    
-});
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
+            e.preventDefault();
+            sendActionToParent('OPEN_SEARCH_MODAL');
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+            e.preventDefault();
+            sendActionToParent('OPEN_LOGIN_MODAL');
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+            e.preventDefault();
+            sendActionToParent('OPEN_CHANGE_CREDS_MODAL');
+        }
+    });
 </script>
 </body>
 </html>
